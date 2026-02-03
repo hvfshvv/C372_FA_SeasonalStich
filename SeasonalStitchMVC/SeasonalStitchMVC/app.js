@@ -11,9 +11,12 @@ const OrderController = require("./Controllers/OrderController");
 const AdminController = require("./Controllers/AdminController");
 const ReportController = require("./Controllers/ReportController");
 const ReviewController = require("./Controllers/ReviewController");
+const StitchyBankController = require("./Controllers/StitchyBankController");
 const paymentRoutes = require("./routes/paymentRoutes");
 const stripeRoutes = require("./routes/stripeRoutes");
 const footerStore = require("./utils/footerStore");
+const User = require("./Models/User");
+const Review = require("./Models/Review");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -58,7 +61,23 @@ app.use((req, res, next) => {
   }
   res.locals.activePage = active;
   res.locals.footer = footerStore.get();
-  next();
+  res.locals.stitchesBalance = 0;
+  res.locals.reviewableCount = 0;
+  if (!req.session.user) {
+    return next();
+  }
+  return User.getStitchesBalance(req.session.user.user_id, (err, balance) => {
+    if (!err) {
+      res.locals.stitchesBalance = balance;
+      req.session.user.stitches_balance = balance;
+    }
+    return Review.getReviewableCountForUser(req.session.user.user_id, (revErr, count) => {
+      if (!revErr) {
+        res.locals.reviewableCount = count;
+      }
+      return next();
+    });
+  });
 });
 
 const storage = multer.diskStorage({
@@ -105,6 +124,7 @@ const requireCustomer = (req, res, next) => {
 };
 
 app.get("/", ProductController.list);
+app.get("/product/:id", ProductController.details);
 
 app.get("/login", (req, res) => res.render("login"));
 app.get("/loginUser", (req, res) => res.redirect("/login"));
@@ -144,6 +164,11 @@ app.get("/track/:id", requireAuth, OrderController.trackingPage);
 app.get("/orders", requireCustomer, OrderController.history);
 app.post("/orders/:id/refund", requireCustomer, OrderController.requestRefund);
 app.post("/reviews/:orderId/:hoodieId", requireCustomer, ReviewController.submit);
+app.get("/orders/:orderId/reviews", requireCustomer, ReviewController.reviewPage);
+app.post("/orders/:orderId/reviews", requireCustomer, ReviewController.submitBatch);
+app.get("/reviews/submitted", requireCustomer, ReviewController.submitted);
+app.get("/stitchybank", requireAuth, StitchyBankController.page);
+app.post("/stitchybank/redeem", requireAuth, StitchyBankController.redeem);
 
 app.get("/admin/orders", requireAdmin, OrderController.adminHistory);
 app.post("/admin/orders/:id/status", requireAdmin, OrderController.updateStatus);

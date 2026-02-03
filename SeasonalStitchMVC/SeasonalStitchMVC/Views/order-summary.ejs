@@ -14,12 +14,18 @@
                 <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
                 <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
                 <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
+                <a class="nav-pill" href="/stitchybank">Stitches: <%= stitchesBalance || 0 %></a>
                 <a href="/logout">Logout</a>
             <% } else if (user) { %>
                 <a class="<%= activePage === 'shop' ? 'active' : '' %>" href="/#shop">Shop</a>
                 <a class="<%= activePage === 'cart' ? 'active' : '' %>" href="/cart">Cart (<%= cartCount %>)</a>
-                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/orders">Orders</a>
-                <span class="nav-pill">Points: <%= user.points || 0 %></span>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/orders">
+                    Orders
+                    <% if (reviewableCount && reviewableCount > 0) { %>
+                        <span class="nav-badge"><%= reviewableCount %></span>
+                    <% } %>
+                </a>
+                <a class="nav-pill" href="/stitchybank">Stitches: <%= stitchesBalance || 0 %></a>
                 <span class="nav-pill secondary">Profile</span>
                 <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
                 <a href="/logout">Logout</a>

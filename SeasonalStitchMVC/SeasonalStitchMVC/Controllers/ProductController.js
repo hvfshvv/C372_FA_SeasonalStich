@@ -1,4 +1,5 @@
 const Hoodie = require('../Models/Hoodie');
+const Review = require('../Models/Review');
 
 const ProductController = {
     list: (req, res) => {
@@ -70,6 +71,28 @@ const ProductController = {
                 image_url: hoodie.image_url ? hoodie.image_url.replace(/^\/?images\//i, '') : ''
             };
             res.render('update', { hoodie: hoodieData, user: req.session.user });
+        });
+    },
+
+    details: (req, res) => {
+        const id = req.params.id;
+        Hoodie.getById(id, (err, hoodie) => {
+            if (err || !hoodie) return res.status(404).send('Hoodie not found');
+            Review.getByHoodie(id, (revErr, reviews) => {
+                if (revErr) return res.status(500).send('Failed to load reviews');
+                const total = (reviews || []).reduce((sum, r) => sum + Number(r.rating || 0), 0);
+                const count = (reviews || []).length;
+                const avg = count ? total / count : 0;
+                res.render('product', {
+                    hoodie: {
+                        ...hoodie,
+                        image_url: hoodie.image_url ? hoodie.image_url.replace(/^\/?images\//i, '') : ''
+                    },
+                    user: req.session.user,
+                    reviews: reviews || [],
+                    reviewStats: { avg, count }
+                });
+            });
         });
     },
 

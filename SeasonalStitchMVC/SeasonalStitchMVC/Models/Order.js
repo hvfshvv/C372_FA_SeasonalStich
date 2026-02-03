@@ -110,6 +110,7 @@ const Order = {
             SELECT o.order_id, o.total, o.shipping_name, o.shipping_address, o.status, o.created_at,
                    o.tracking_number, o.tracking_provider, o.tracking_url,
                    o.refund_status, o.refund_reason, o.refund_note,
+                   o.stitches_earned,
                    COUNT(oi.order_id) AS item_count
             FROM orders o
             LEFT JOIN order_items oi ON o.order_id = oi.order_id
@@ -151,6 +152,7 @@ const Order = {
         const sql = `
             SELECT o.order_id, o.user_id, o.total, o.shipping_name, o.shipping_address, o.status, o.created_at,
                    o.payment_status, o.payment_provider, o.payment_ref, o.paid_at,
+                   o.stitches_earned, o.stitches_awarded,
                    o.tracking_number, o.tracking_provider, o.tracking_url,
                    o.refund_status, o.refund_reason, o.refund_note
             FROM orders o
@@ -187,6 +189,7 @@ const Order = {
         const sql = `
             SELECT o.order_id, o.user_id, o.total, o.shipping_name, o.shipping_address, o.status, o.created_at,
                    o.payment_status, o.payment_provider, o.payment_ref, o.paid_at,
+                   o.stitches_earned, o.stitches_awarded,
                    o.tracking_number, o.tracking_provider, o.tracking_url,
                    o.refund_status, o.refund_reason, o.refund_note,
                    u.full_name, u.email,
@@ -214,6 +217,8 @@ const Order = {
                 payment_provider: rows[0].payment_provider,
                 payment_ref: rows[0].payment_ref,
                 paid_at: rows[0].paid_at,
+                stitches_earned: rows[0].stitches_earned,
+                stitches_awarded: rows[0].stitches_awarded,
                 tracking_number: rows[0].tracking_number,
                 tracking_provider: rows[0].tracking_provider,
                 tracking_url: rows[0].tracking_url,
@@ -367,6 +372,62 @@ const Order = {
                             };
 
                             step();
+                        }
+                    );
+                }
+            );
+        });
+    },
+
+    awardStitchesIfNeeded: (orderId, callback) => {
+        db.beginTransaction((err) => {
+            if (err) return callback(err);
+
+            db.query(
+                `SELECT order_id, user_id, total, payment_status, stitches_earned, stitches_awarded
+                 FROM orders
+                 WHERE order_id = ?
+                 FOR UPDATE`,
+                [orderId],
+                (lockErr, rows) => {
+                    if (lockErr) return db.rollback(() => callback(lockErr));
+                    if (!rows || rows.length === 0) {
+                        return db.rollback(() => callback(new Error('Order not found')));
+                    }
+
+                    const order = rows[0];
+                    if (order.payment_status !== 'paid') {
+                        return db.commit((commitErr) => {
+                            if (commitErr) return db.rollback(() => callback(commitErr));
+                            return callback(null, { skipped: true, reason: 'unpaid' });
+                        });
+                    }
+
+                    const alreadyAwarded = Number(order.stitches_awarded || 0) === 1 || Number(order.stitches_earned || 0) > 0;
+                    if (alreadyAwarded) {
+                        return db.commit((commitErr) => {
+                            if (commitErr) return db.rollback(() => callback(commitErr));
+                            return callback(null, { skipped: true, reason: 'already_awarded' });
+                        });
+                    }
+
+                    const stitchesEarned = Math.floor(Number(order.total || 0));
+                    db.query(
+                        'UPDATE orders SET stitches_earned = ?, stitches_awarded = 1 WHERE order_id = ?',
+                        [stitchesEarned, orderId],
+                        (updErr) => {
+                            if (updErr) return db.rollback(() => callback(updErr));
+                            db.query(
+                                'UPDATE users SET stitches_balance = stitches_balance + ? WHERE user_id = ?',
+                                [stitchesEarned, order.user_id],
+                                (userErr) => {
+                                    if (userErr) return db.rollback(() => callback(userErr));
+                                    db.commit((commitErr) => {
+                                        if (commitErr) return db.rollback(() => callback(commitErr));
+                                        return callback(null, { skipped: false, stitchesEarned });
+                                    });
+                                }
+                            );
                         }
                     );
                 }

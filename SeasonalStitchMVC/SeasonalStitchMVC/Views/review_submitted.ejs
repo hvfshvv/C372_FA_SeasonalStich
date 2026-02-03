@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Review Submitted - Seasonal Stitch</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">Seasonal Stitch</a>
+        <div class="nav-links">
+            <a class="<%= activePage === 'shop' ? 'active' : '' %>" href="/#shop">Shop</a>
+            <a class="<%= activePage === 'cart' ? 'active' : '' %>" href="/cart">Cart (<%= cartCount %>)</a>
+            <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/orders">
+                Orders
+                <% if (reviewableCount && reviewableCount > 0) { %>
+                    <span class="nav-badge"><%= reviewableCount %></span>
+                <% } %>
+            </a>
+            <a class="nav-pill" href="/stitchybank">Stitches: <%= stitchesBalance || 0 %></a>
+            <span class="nav-pill secondary">Profile</span>
+            <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
+            <a href="/logout">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="form-container form-medium">
+            <h2>Thank you for your feedback</h2>
+            <p>Your review has been submitted successfully.</p>
+            <div class="admin-controls center">
+                <a href="/orders" class="btn btn-outline">Back to Orders</a>
+                <a href="/" class="btn btn-primary">Back to Shop</a>
+            </div>
+        </div>
+    </div>
+    <%- include('partials/footer') %>
+</body>
+</html>

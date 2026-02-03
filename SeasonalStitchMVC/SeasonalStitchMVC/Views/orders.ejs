@@ -14,11 +14,17 @@
                 <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
                 <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
                 <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
+                <a class="nav-pill" href="/stitchybank">Stitches: <%= stitchesBalance || 0 %></a>
             <% } else { %>
                 <a class="<%= activePage === 'shop' ? 'active' : '' %>" href="/#shop">Shop</a>
                 <a class="<%= activePage === 'cart' ? 'active' : '' %>" href="/cart">Cart (<%= cartCount %>)</a>
-                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/orders">Orders</a>
-                <span class="nav-pill">Points: <%= user ? (user.points || 0) : 0 %></span>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/orders">
+                    Orders
+                    <% if (reviewableCount && reviewableCount > 0) { %>
+                        <span class="nav-badge"><%= reviewableCount %></span>
+                    <% } %>
+                </a>
+                <a class="nav-pill" href="/stitchybank">Stitches: <%= stitchesBalance || 0 %></a>
                 <span class="nav-pill secondary">Profile</span>
             <% } %>
             <% if (user) { %>
@@ -73,9 +79,13 @@
             </section>
         <% } %>
 
-        <% if (!orders || orders.length === 0) { %>
+        <% if (error) { %>
             <div class="empty-state">
-                <p><%= isAdmin ? 'No orders available yet.' : 'No orders found yet.' %></p>
+                <p><%= error %></p>
+            </div>
+        <% } else if (!orders || orders.length === 0) { %>
+            <div class="empty-state">
+                <p><%= isAdmin ? 'No orders available yet.' : (emptyMessage || 'No orders found yet.') %></p>
                 <% if (isAdmin) { %>
                     <a href="/admin/dashboard" class="btn btn-outline">Back to Dashboard</a>
                 <% } else { %>
@@ -156,6 +166,11 @@
                             <div class="order-actions">
                                 <a href="/order-summary/<%= order.order_id %>" class="btn btn-outline">View Order</a>
                                 <a href="/track/<%= order.order_id %>" class="btn btn-primary">Track</a>
+                                <% if (order.reviewableProductsCount && order.reviewableProductsCount > 0) { %>
+                                    <a href="/orders/<%= order.order_id %>/reviews" class="btn btn-outline">
+                                        Leave a review (<%= order.reviewableProductsCount %>)
+                                    </a>
+                                <% } %>
                             </div>
                         <% } %>
                     </div>

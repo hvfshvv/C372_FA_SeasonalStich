@@ -13,6 +13,7 @@
             <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
             <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
             <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
+            <a class="nav-pill" href="/stitchybank">Stitches: <%= stitchesBalance || 0 %></a>
             <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
             <a href="/logout">Logout</a>
         </div>

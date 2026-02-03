@@ -267,17 +267,38 @@ const OrderController = {
 
     history: (req, res) => {
         Order.getByUser(req.session.user.user_id, (err, orders) => {
-            if (err) return res.status(500).send('Failed to load orders');
+            if (err) {
+                console.error("orders route error:", err);
+                return res.status(500).render('orders', {
+                    orders: [],
+                    user: req.session.user,
+                    isAdmin: false,
+                    filters: { status: (req.query.status || 'all').toLowerCase() },
+                    emptyMessage: 'No past orders :,(',
+                    error: 'We could not load your orders right now.'
+                });
+            }
             const statusFilter = (req.query.status || 'all').toLowerCase();
             const filtered = (orders || []).filter((order) => {
                 const status = (order.status === 'on_hold' ? 'pending' : (order.status || 'pending')).toLowerCase();
                 return statusFilter === 'all' ? true : status === statusFilter;
             });
-            res.render('orders', {
-                orders: filtered,
-                user: req.session.user,
-                isAdmin: false,
-                filters: { status: statusFilter }
+            Review.getReviewableCountsByOrder(req.session.user.user_id, (revErr, reviewableMap) => {
+                if (revErr) {
+                    console.error("orders route error:", revErr);
+                }
+                const decorated = (filtered || []).map((order) => ({
+                    ...order,
+                    reviewableProductsCount: reviewableMap ? (reviewableMap[order.order_id] || 0) : 0
+                }));
+                res.render('orders', {
+                    orders: decorated,
+                    user: req.session.user,
+                    isAdmin: false,
+                    filters: { status: statusFilter },
+                    emptyMessage: 'No past orders :,(',
+                    error: null
+                });
             });
         });
     },
@@ -301,14 +322,16 @@ const OrderController = {
             });
 
             res.render('orders', {
-                orders: filtered,
+                orders: filtered || [],
                 user: req.session.user,
                 isAdmin: true,
                 filters: {
                     q: req.query.q || '',
                     status: statusFilter,
                     refund: refundFilter
-                }
+                },
+                emptyMessage: 'No past orders :,(',
+                error: null
             });
         });
     },
@@ -348,12 +371,17 @@ const OrderController = {
             if (!isAdmin && order.user_id !== req.session.user.user_id) {
                 return res.status(403).send('Forbidden');
             }
-            res.render('checkout-success', {
-                orderId: order.order_id,
-                total: Number(order.total),
-                paymentRef: order.payment_ref || '',
-                paymentProvider: order.payment_provider || '',
-                user: req.session.user
+            Order.awardStitchesIfNeeded(orderId, (awardErr) => {
+                if (awardErr) {
+                    console.error('Failed to award stitches:', awardErr);
+                }
+                res.render('checkout-success', {
+                    orderId: order.order_id,
+                    total: Number(order.total),
+                    paymentRef: order.payment_ref || '',
+                    paymentProvider: order.payment_provider || '',
+                    user: req.session.user
+                });
             });
         });
     },
@@ -392,14 +420,22 @@ const OrderController = {
                 });
             };
 
-            if (!isAdmin) {
-                return Review.getByOrderForUser(orderId, req.session.user.user_id, (revErr, reviews) => {
-                    if (revErr) return res.status(500).send('Failed to load reviews');
-                    return renderSummary(reviews);
-                });
-            }
+            const continueRender = () => {
+                if (!isAdmin) {
+                    return Review.getByOrderForUser(orderId, req.session.user.user_id, (revErr, reviews) => {
+                        if (revErr) return res.status(500).send('Failed to load reviews');
+                        return renderSummary(reviews);
+                    });
+                }
+                return renderSummary([]);
+            };
 
-            return renderSummary([]);
+            return Order.awardStitchesIfNeeded(orderId, (awardErr) => {
+                if (awardErr) {
+                    console.error('Failed to award stitches:', awardErr);
+                }
+                return continueRender();
+            });
         });
     },
 
