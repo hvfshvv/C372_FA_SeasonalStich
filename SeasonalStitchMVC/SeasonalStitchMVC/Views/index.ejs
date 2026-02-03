@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Seasonal Stitch</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">Seasonal Stitch</a>
+        <div class="nav-links">
+            <% if (user && user.role === 'admin') { %>
+                <a class="<%= activePage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">Dashboard</a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/admin/orders">Orders</a>
+                <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
+                <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
+                <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
+                <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
+                <a href="/logout">Logout</a>
+            <% } else if (user) { %>
+                <a class="<%= activePage === 'shop' ? 'active' : '' %>" href="/#shop">Shop</a>
+                <a class="<%= activePage === 'cart' ? 'active' : '' %>" href="/cart">Cart (<%= cartCount %>)</a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/orders">Orders</a>
+                <span class="nav-pill">Points: <%= user.points || 0 %></span>
+                <span class="nav-pill secondary">Profile</span>
+                <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
+                <a href="/logout">Logout</a>
+            <% } else { %>
+                <a href="/#hero">Home</a>
+                <a href="/#shop">Shop</a>
+                <a href="/login">Login</a>
+                <a href="/register">Register</a>
+            <% } %>
+        </div>
+    </nav>
+
+    <div class="container">
+        <section class="hero-banner hero-full" id="hero">
+            <div class="cta">
+                <h1>Welcome to Seasonal Stitch</h1>
+                <p>Discover cozy hoodies tailored to every season. Browse our curated collection and stay comfortable all year round.</p>
+                <% if (!user) { %>
+                    <div class="hero-actions">
+                        <a href="/login" class="btn btn-primary">Shop the Collection</a>
+                    </div>
+                <% } %>
+            </div>
+        </section>
+
+        <% if (!user) { %>
+            <div class="callout-card">
+                <h3>Please log in to explore our collection</h3>
+                <p>Sign in to browse products and add them to your cart.</p>
+                <div class="hero-actions">
+                    <a href="/login" class="btn btn-primary">Go to Login</a>
+                </div>
+            </div>
+        <% } else { %>
+            <section class="filter-bar">
+                <form class="filter-form" method="get" action="/">
+                    <input type="text" name="q" placeholder="Search hoodies..." value="<%= search && search.q ? search.q : '' %>">
+                    <select name="season">
+                        <option value="">All</option>
+                        <option value="Spring/Summer" <%= search && search.season === 'Spring/Summer' ? 'selected' : '' %>>Spring/Summer</option>
+                        <option value="Fall/Winter" <%= search && search.season === 'Fall/Winter' ? 'selected' : '' %>>Fall/Winter</option>
+                        <option value="Limited" <%= search && search.season === 'Limited' ? 'selected' : '' %>>Limited Edition</option>
+                    </select>
+                    <select name="availability">
+                        <option value="">Availability</option>
+                        <option value="in_stock" <%= search && search.availability === 'in_stock' ? 'selected' : '' %>>In stock</option>
+                        <option value="low_stock" <%= search && search.availability === 'low_stock' ? 'selected' : '' %>>Low stock</option>
+                        <option value="out_of_stock" <%= search && search.availability === 'out_of_stock' ? 'selected' : '' %>>Out of stock</option>
+                    </select>
+                    <% if (!(user && user.role === 'admin')) { %>
+                        <input type="number" name="price_min" step="0.01" min="0" placeholder="Min $" value="<%= search && search.price_min ? search.price_min : '' %>">
+                        <input type="number" name="price_max" step="0.01" min="0" placeholder="Max $" value="<%= search && search.price_max ? search.price_max : '' %>">
+                    <% } %>
+                    <button type="submit" class="btn btn-outline btn-compact">Search</button>
+                </form>
+            </section>
+
+            <% if (user.role === 'admin') { %>
+                <div class="admin-header">
+                    <h2>Inventory Management</h2>
+                    <a href="/addHoodie" class="btn btn-outline add-btn">+ Add New Hoodie</a>
+                </div>
+            <% } %>
+
+            <div class="hoodies-grid" id="shop">
+                <% hoodies.forEach(hoodie => { %>
+                    <div class="hoodie-card <%= hoodie.lowStock ? 'low-stock' : '' %>">
+                        <div class="hoodie-image-wrap">
+                            <img src="/images/<%= hoodie.image_url %>" alt="<%= hoodie.name %>">
+                        </div>
+                        <div class="hoodie-info">
+                            <details class="hoodie-details">
+                                <summary class="hoodie-summary">
+                                    <div>
+                                        <h3><%= hoodie.name %></h3>
+                                        <p class="price">$<%= Number(hoodie.price).toFixed(2) %></p>
+                                    </div>
+                                    <span class="summary-toggle">Details</span>
+                                </summary>
+                                <div class="hoodie-meta">
+                                    <p class="stock <%= hoodie.lowStock ? 'low-stock' : '' %>">
+                                        Stock: <%= hoodie.stock %>
+                                    </p>
+                                    <% const avgRating = Number(hoodie.avg_rating || 0); %>
+                                    <% if (Number(hoodie.review_count || 0) > 0) { %>
+                                        <p class="rating-line">Rating: <%= avgRating.toFixed(1) %> / 5 (<%= hoodie.review_count %>)</p>
+                                    <% } else { %>
+                                        <p class="rating-line">No reviews yet</p>
+                                    <% } %>
+                                    <% if (hoodie.lowStock) { %>
+                                        <p class="low-stock">Low Stock - grab yours soon!</p>
+                                    <% } %>
+                                    <div class="season-tag <%= hoodie.season === 'Limited' ? 'limited' : '' %>">
+                                        <% if (hoodie.season === 'Limited') { %>
+                                            <span class="sparkle" aria-hidden="true"></span>
+                                        <% } %>
+                                        <%= hoodie.season %>
+                                    </div>
+                                    <p class="hoodie-description"><%= hoodie.description %></p>
+                                </div>
+                            </details>
+                            <% if (user && user.role !== 'admin') { %>
+                                <form action="/cart/add/<%= hoodie.hoodie_id %>" method="post" class="cart-add-form">
+                                    <input type="hidden" name="quantity" value="1" />
+                                    <button type="submit" class="btn btn-primary">Add to Cart</button>
+                                </form>
+                            <% } %>
+                            
+                            <% if (user && user.role === 'admin') { %>
+                                <div class="admin-controls">
+                                    <a href="/deleteHoodie/<%= hoodie.hoodie_id %>" 
+                                       class="btn btn-danger delete-btn"
+                                       onclick="return confirm('Are you sure you want to delete this item?')">
+                                        Delete
+                                    </a>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        <% } %>
+    </div>
+    <%- include('partials/footer') %>
+</body>
+</html>

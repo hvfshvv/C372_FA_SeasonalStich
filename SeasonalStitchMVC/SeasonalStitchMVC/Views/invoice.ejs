@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Invoice #<%= invoice ? invoice.invoice_number : '' %> - Seasonal Stitch</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">Seasonal Stitch</a>
+        <div class="nav-links">
+            <% if (user && user.role === 'admin') { %>
+                <a class="<%= activePage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">Dashboard</a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/admin/orders">Orders</a>
+                <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
+                <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
+                <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
+                <a href="/logout">Logout</a>
+            <% } else if (user) { %>
+                <a class="<%= activePage === 'shop' ? 'active' : '' %>" href="/#shop">Shop</a>
+                <a class="<%= activePage === 'cart' ? 'active' : '' %>" href="/cart">Cart (<%= cartCount %>)</a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/orders">Orders</a>
+                <span class="nav-pill">Points: <%= user.points || 0 %></span>
+                <span class="nav-pill secondary">Profile</span>
+                <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
+                <a href="/logout">Logout</a>
+            <% } else { %>
+                <a href="/#hero">Home</a>
+                <a href="/#shop">Shop</a>
+                <a href="/login">Login</a>
+                <a href="/register">Register</a>
+            <% } %>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="form-container form-wide">
+            <div class="admin-header">
+                <div>
+                    <h2>Invoice</h2>
+                    <p class="order-muted">Invoice Number: <%= invoice ? invoice.invoice_number : '' %></p>
+                </div>
+                <a class="btn btn-outline" href="/invoice/<%= order.order_id %>">Download PDF</a>
+            </div>
+
+            <p><strong>Order ID:</strong> <%= order.order_id %></p>
+            <p><strong>Date:</strong> <%= new Date(order.created_at).toLocaleString() %></p>
+            <p><strong>Billed To:</strong> <%= order.shipping_name %></p>
+            <p><%= order.shipping_address %></p>
+            <p><strong>Payment Method:</strong> <%= order.payment_provider || 'N/A' %></p>
+            <p><strong>Payment Reference:</strong> <%= order.payment_ref || 'N/A' %></p>
+        </div>
+
+        <div class="form-container form-wide">
+            <h3>Items</h3>
+            <div class="hoodies-grid">
+                <% items.forEach(item => { %>
+                    <div class="hoodie-card">
+                        <img src="/images/<%= item.image_url %>" alt="<%= item.name %>">
+                        <div class="hoodie-info">
+                            <h3><%= item.name %></h3>
+                            <p class="stock">Qty: <%= item.quantity %></p>
+                            <p class="price">$<%= Number(item.price).toFixed(2) %></p>
+                            <p><strong>Line Total:</strong> $<%= (Number(item.price) * item.quantity).toFixed(2) %></p>
+                        </div>
+                    </div>
+                <% }) %>
+            </div>
+        </div>
+
+        <div class="form-container form-medium">
+            <h3>Totals</h3>
+            <p><strong>Subtotal:</strong> $<%= Number(invoice.subtotal).toFixed(2) %></p>
+            <p><strong>Tax:</strong> $<%= Number(invoice.tax).toFixed(2) %></p>
+            <p><strong>Total:</strong> $<%= Number(invoice.total).toFixed(2) %></p>
+        </div>
+    </div>
+    <%- include('partials/footer') %>
+</body>
+</html>

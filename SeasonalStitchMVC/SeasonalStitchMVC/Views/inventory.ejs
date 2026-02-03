@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Inventory - Seasonal Stitch</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">Seasonal Stitch</a>
+        <div class="nav-links">
+            <a class="<%= activePage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">Dashboard</a>
+            <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/admin/orders">Orders</a>
+            <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
+            <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
+            <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
+            <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
+            <a href="/logout">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="admin-header">
+            <h2>Inventory</h2>
+        </div>
+
+        <section class="filter-bar">
+            <form class="filter-form" method="get" action="/inventory">
+                <input type="text" name="q" placeholder="Search inventory..." value="<%= filters && filters.q ? filters.q : '' %>">
+                <select name="season">
+                    <option value="">Season</option>
+                    <option value="Spring/Summer" <%= filters && filters.season === 'Spring/Summer' ? 'selected' : '' %>>Spring/Summer</option>
+                    <option value="Fall/Winter" <%= filters && filters.season === 'Fall/Winter' ? 'selected' : '' %>>Fall/Winter</option>
+                    <option value="Limited" <%= filters && filters.season === 'Limited' ? 'selected' : '' %>>Limited Edition</option>
+                </select>
+                <select name="stock_status">
+                    <option value="">Stock Status</option>
+                    <option value="in" <%= filters && filters.stock_status === 'in' ? 'selected' : '' %>>In stock</option>
+                    <option value="low" <%= filters && filters.stock_status === 'low' ? 'selected' : '' %>>Low stock</option>
+                    <option value="out" <%= filters && filters.stock_status === 'out' ? 'selected' : '' %>>Out of stock</option>
+                </select>
+                <button type="submit" class="btn btn-outline btn-compact">Filter</button>
+            </form>
+        </section>
+
+        <% if (!hoodies || hoodies.length === 0) { %>
+            <p class="empty-state">No hoodies in inventory.</p>
+        <% } else { %>
+            <div class="orders-grid">
+                <% hoodies.forEach(hoodie => { %>
+                    <div class="order-card">
+                        <div class="order-card-header">
+                            <div>
+                                <p class="order-label">Hoodie</p>
+                                <h3><%= hoodie.name %></h3>
+                            </div>
+                            <div class="order-meta">
+                                <% if (hoodie.lowStock) { %>
+                                    <span class="status-pill low-stock">Low Stock - Please resock</span>
+                                <% } %>
+                            </div>
+                        </div>
+                        <div class="order-card-body">
+                            <p><strong>Season:</strong> <%= hoodie.season %></p>
+                            <p><strong>Stock:</strong> <%= hoodie.stock %></p>
+                        </div>
+                        <div class="order-card-footer">
+                            <a href="/editHoodie/<%= hoodie.hoodie_id %>" class="btn btn-outline">Update Stock</a>
+                        </div>
+                    </div>
+                <% }) %>
+            </div>
+        <% } %>
+    </div>
+    <%- include('partials/footer') %>
+</body>
+</html>

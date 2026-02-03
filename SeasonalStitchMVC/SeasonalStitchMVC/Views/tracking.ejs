@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Track Order - Seasonal Stitch</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">Seasonal Stitch</a>
+        <div class="nav-links">
+            <% if (user && user.role === 'admin') { %>
+                <a class="<%= activePage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">Dashboard</a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/admin/orders">Orders</a>
+                <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
+                <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
+                <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
+            <% } else { %>
+                <a class="<%= activePage === 'shop' ? 'active' : '' %>" href="/#shop">Shop</a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/orders">Orders</a>
+                <a class="<%= activePage === 'cart' ? 'active' : '' %>" href="/cart">Cart (<%= cartCount %>)</a>
+                <span class="nav-pill">Points: <%= user ? (user.points || 0) : 0 %></span>
+                <span class="nav-pill secondary">Profile</span>
+            <% } %>
+            <% if (user) { %>
+                <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
+                <a href="/logout">Logout</a>
+            <% } else { %>
+                <a href="/login">Login</a>
+                <a href="/register">Register</a>
+            <% } %>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="form-container form-medium">
+            <% const status = order.status === 'on_hold' ? 'pending' : (order.status || 'pending'); %>
+            <h2>Track Order #<%= order.order_id %></h2>
+            <p>Placed on <%= new Date(order.created_at).toLocaleDateString() %></p>
+            <div class="tracking-status">
+                <span class="status-pill status-<%= status %>">
+                    <%= status === 'delivering' ? 'On delivery' : status === 'delivered' ? 'Delivered' : 'Pending' %>
+                </span>
+                <span class="tracking-note">
+                    <% if (status === 'delivered') { %>
+                        Your order has been delivered.
+                    <% } else if (status === 'delivering') { %>
+                        Your shipment is on the way.
+                    <% } else { %>
+                        Your order is pending and is being prepared.
+                    <% } %>
+                </span>
+            </div>
+
+            <div class="tracking-steps">
+                <div class="tracking-step <%= status === 'pending' ? 'is-active' : '' %>">
+                    <span>Pending</span>
+                </div>
+                <div class="tracking-step <%= status === 'delivering' ? 'is-active' : '' %>">
+                    <span>On delivery</span>
+                </div>
+                <div class="tracking-step <%= status === 'delivered' ? 'is-active' : '' %>">
+                    <span>Delivered</span>
+                </div>
+            </div>
+
+            <div class="tracking-rail">
+                <div class="tracking-node <%= status === 'pending' ? 'is-active' : '' %>">
+                    <span class="tracking-dot"></span>
+                    <span class="tracking-label">Pending</span>
+                </div>
+                <div class="tracking-node <%= status === 'delivering' ? 'is-active' : '' %>">
+                    <span class="tracking-dot"></span>
+                    <span class="tracking-label">On delivery</span>
+                </div>
+                <div class="tracking-node <%= status === 'delivered' ? 'is-active' : '' %>">
+                    <span class="tracking-dot"></span>
+                    <span class="tracking-label">Delivered</span>
+                </div>
+                <div class="tracking-icons <%= status === 'delivering' ? 'is-truck' : status === 'delivered' ? 'is-done' : '' %>">
+                    <span class="tracking-icon arrow" aria-hidden="true"></span>
+                    <span class="tracking-icon truck" aria-hidden="true"></span>
+                </div>
+            </div>
+
+            <div class="tracking-details">
+                <p><strong>Ship to:</strong> <%= order.shipping_name %></p>
+                <p class="order-muted"><%= order.shipping_address %></p>
+            </div>
+
+            <div class="tracking-details">
+                <p><strong>Carrier:</strong> <%= order.tracking_provider || 'Not provided yet' %></p>
+                <p><strong>Tracking Number:</strong> <%= order.tracking_number || 'Not provided yet' %></p>
+                <p>
+                    <strong>Tracking Link:</strong>
+                    <% if (order.tracking_url) { %>
+                        <a href="<%= order.tracking_url %>" target="_blank" rel="noopener">Open tracking</a>
+                    <% } else { %>
+                        Not provided yet
+                    <% } %>
+                </p>
+            </div>
+
+            <% const refundStatus = order.refund_status || 'none'; %>
+            <div class="tracking-details">
+                <p><strong>Refund Status:</strong> <%= refundStatus === 'none' ? 'Not requested' : refundStatus %></p>
+                <% if (order.refund_reason) { %>
+                    <p class="order-muted"><strong>Reason:</strong> <%= order.refund_reason %></p>
+                <% } %>
+                <% if (order.refund_note) { %>
+                    <p class="order-muted"><strong>Admin Note:</strong> <%= order.refund_note %></p>
+                <% } %>
+            </div>
+
+            <div class="admin-controls center">
+                <a href="/order-summary/<%= order.order_id %>" class="btn btn-outline">View Order</a>
+                <% if (user && user.role === 'admin') { %>
+                    <a href="/admin/orders" class="btn btn-primary">Back to Orders</a>
+                <% } else { %>
+                    <a href="/orders" class="btn btn-primary">Back to Orders</a>
+                <% } %>
+            </div>
+        </div>
+    </div>
+    <%- include('partials/footer') %>
+</body>
+</html>

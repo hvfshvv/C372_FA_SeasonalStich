@@ -1,0 +1,21 @@
+<footer class="site-footer">
+    <div class="footer-content">
+        <div class="footer-block">
+            <h4>Stay Connected</h4>
+            <ul>
+                <li><a href="<%= footer.instagram %>" target="_blank" rel="noopener">Instagram</a></li>
+                <li><a href="<%= footer.facebook %>" target="_blank" rel="noopener">Facebook</a></li>
+            </ul>
+        </div>
+        <div class="footer-block">
+            <h4>Customer Service</h4>
+            <p>Phone: <a href="tel:<%= footer.phone %>"><%= footer.phone %></a></p>
+            <p>Email: <a href="mailto:<%= footer.email %>"><%= footer.email %></a></p>
+        </div>
+        <% if (user && user.role === 'admin') { %>
+            <div class="footer-block admin-footer-cta">
+                <a class="btn btn-outline btn-compact" href="/admin/footer">Edit Footer</a>
+            </div>
+        <% } %>
+    </div>
+</footer>

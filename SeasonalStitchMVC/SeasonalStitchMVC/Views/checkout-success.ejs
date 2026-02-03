@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Order Placed - Seasonal Stitch</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">Seasonal Stitch</a>
+        <div class="nav-links">
+            <% if (user && user.role === 'admin') { %>
+                <a class="<%= activePage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">Dashboard</a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/admin/orders">Orders</a>
+                <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
+                <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
+                <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
+                <a href="/logout">Logout</a>
+            <% } else if (user) { %>
+                <a class="<%= activePage === 'shop' ? 'active' : '' %>" href="/#shop">Shop</a>
+                <a class="<%= activePage === 'cart' ? 'active' : '' %>" href="/cart">Cart (<%= cartCount %>)</a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/orders">Orders</a>
+                <span class="nav-pill">Points: <%= user.points || 0 %></span>
+                <span class="nav-pill secondary">Profile</span>
+                <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
+                <a href="/logout">Logout</a>
+            <% } else { %>
+                <a href="/#hero">Home</a>
+                <a href="/#shop">Shop</a>
+                <a href="/login">Login</a>
+                <a href="/register">Register</a>
+            <% } %>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="form-container form-medium">
+            <h2>Thank you!</h2>
+            <p>Your order has been placed.</p>
+            <p>Total Paid: $<%= Number(total).toFixed(2) %></p>
+            <% if (paymentRef) { %>
+                <p class="order-muted">Payment Ref: <%= paymentRef %></p>
+            <% } %>
+            <div class="admin-controls center">
+                <a class="btn btn-outline" href="/track/<%= orderId %>">Track Delivery</a>
+                <a class="btn btn-primary" href="/">Back to Home</a>
+            </div>
+        </div>
+    </div>
+    <%- include('partials/footer') %>
+</body>
+</html>

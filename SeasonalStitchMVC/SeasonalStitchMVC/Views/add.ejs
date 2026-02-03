@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add New Hoodie - Seasonal Stitch</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">Seasonal Stitch</a>
+        <div class="nav-links">
+            <% if (user && user.role === 'admin') { %>
+                <a class="<%= activePage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">Dashboard</a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/admin/orders">Orders</a>
+                <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
+                <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
+                <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
+                <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
+                <a href="/logout">Logout</a>
+            <% } %>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="form-container form-wide">
+            <h2>Add New Hoodie</h2>
+            <form action="/addHoodie" method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="name">Name:</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description:</label>
+                    <textarea id="description" name="description" rows="3" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="price">Price:</label>
+                    <input type="number" id="price" name="price" step="0.01" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="stock">Stock:</label>
+                    <input type="number" id="stock" name="stock" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="season">Season:</label>
+                    <select id="season" name="season" required>
+                        <option value="Spring/Summer">Spring/Summer</option>
+                        <option value="Fall/Winter">Fall/Winter</option>
+                        <option value="Limited">Limited Edition</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="image">Image:</label>
+                    <input type="file" id="image" name="image" accept="image/*" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Add Hoodie</button>
+            </form>
+        </div>
+    </div>
+    <%- include('partials/footer') %>
+</body>
+</html>

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Checkout - Seasonal Stitch</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">Seasonal Stitch</a>
+        <div class="nav-links">
+            <% if (user && user.role === 'admin') { %>
+                <a class="<%= activePage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">Dashboard</a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/admin/orders">Orders</a>
+                <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
+                <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
+                <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
+                <a href="/logout">Logout</a>
+            <% } else if (user) { %>
+                <a class="<%= activePage === 'shop' ? 'active' : '' %>" href="/#shop">Shop</a>
+                <a class="<%= activePage === 'cart' ? 'active' : '' %>" href="/cart">Cart (<%= cartCount %>)</a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/orders">Orders</a>
+                <span class="nav-pill">Points: <%= user.points || 0 %></span>
+                <span class="nav-pill secondary">Profile</span>
+                <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
+                <a href="/logout">Logout</a>
+            <% } else { %>
+                <a href="/#hero">Home</a>
+                <a href="/#shop">Shop</a>
+                <a href="/login">Login</a>
+                <a href="/register">Register</a>
+            <% } %>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2 class="page-title">Payment</h2>
+        <div class="form-container form-wide">
+            <h3>Shipping Details</h3>
+            <form id="checkout-form" action="/checkout" method="post">
+                <div class="form-group">
+                    <label for="shipping_name">Full Name</label>
+                    <input type="text" id="shipping_name" name="shipping_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="shipping_address">Address</label>
+                    <textarea id="shipping_address" name="shipping_address" rows="3" required></textarea>
+                </div>
+
+                <h3>Payment Method</h3>
+                <div id="paypal-section" class="paypal-section" data-total="<%= totals.total.toFixed(2) %>" data-max-discount="<%= Number(maxDiscount).toFixed(2) %>" data-promo-discount="<%= Number(promoDiscount || 0).toFixed(2) %>">
+                    <div id="paypal-button-container"></div>
+                    <div id="card-button-container" class="paypal-card-button"></div>
+                    <% if (!paypalClientId) { %>
+                        <p class="order-muted">PayPal is not configured. Add `PAYPAL_CLIENT_ID` in `.env`.</p>
+                    <% } %>
+                </div>
+                <div class="form-group">
+                    <button type="button" id="stripe-checkout" class="btn btn-primary" <%= stripeEnabled ? '' : 'disabled' %>>Pay with Stripe</button>
+                    <% if (!stripeEnabled) { %>
+                        <p class="order-muted">Stripe is not configured. Add `STRIPE_SECRET_KEY` in `.env`.</p>
+                    <% } %>
+                </div>
+
+                <h3>Promo Code</h3>
+                <div class="form-group">
+                    <label for="promo_code">Enter promo code</label>
+                    <div class="status-control">
+                        <input type="text" id="promo_code" name="promo_code" value="<%= promoCode || '' %>" placeholder="e.g. STITCH10">
+                        <button type="submit" class="btn btn-outline btn-compact" formaction="/checkout/promo" formnovalidate>Apply</button>
+                    </div>
+                    <% if (promoError) { %>
+                        <p class="error-message"><%= promoError %></p>
+                    <% } else if (promoCode) { %>
+                        <p class="order-muted">Promo applied: <%= promoCode %> (<%= Number(promoPercent || 0).toFixed(0) %>% off)</p>
+                    <% } %>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="use_points" name="use_points" <%= maxDiscount > 0 ? '' : 'disabled' %>>
+                        Use points for discount
+                    </label>
+                    <p class="order-muted">
+                        You have <%= availablePoints %> points.
+                    </p>
+                </div>
+
+                <h3>Order Summary</h3>
+                <div class="summary-list">
+                    <% cart.forEach(item => { %>
+                        <div class="summary-row">
+                            <div>
+                                <strong><%= item.name %></strong>
+                                <div><span>Qty: <%= item.quantity %></span></div>
+                            </div>
+                            <div class="summary-total">$<%= (Number(item.price) * item.quantity).toFixed(2) %></div>
+                        </div>
+                    <% }); %>
+                </div>
+                <p><strong>Items:</strong> <%= totals.items %></p>
+                <p><strong>Original Total:</strong> $<span id="order-original"><%= totals.total.toFixed(2) %></span></p>
+                <p id="discount-line" style="display: none;"><strong>Discount:</strong> -$<span id="discount-amount">0.00</span></p>
+                <p><strong>Final Total:</strong> $<span id="order-total"><%= totals.total.toFixed(2) %></span></p>
+
+                <div class="admin-controls" id="card-submit">
+                    <a href="/cart" class="btn btn-outline">Back to Cart</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <% if (paypalClientId) { %>
+        <script src="https://www.paypal.com/sdk/js?client-id=<%= paypalClientId %>&currency=SGD"></script>
+    <% } %>
+    <script>
+        const form = document.getElementById('checkout-form');
+        const paypalSection = document.getElementById('paypal-section');
+        const usePoints = document.getElementById('use_points');
+        const promoInput = document.getElementById('promo_code');
+        const stripeButton = document.getElementById('stripe-checkout');
+        const discountLine = document.getElementById('discount-line');
+        const discountAmount = document.getElementById('discount-amount');
+        const orderOriginal = document.getElementById('order-original');
+        const orderTotal = document.getElementById('order-total');
+        const paypalEnabled = <%= paypalClientId ? 'true' : 'false' %>;
+
+        const updateTotals = () => {
+            const baseTotal = Number(paypalSection.dataset.total || '0');
+            const promoDiscount = Number(paypalSection.dataset.promoDiscount || '0');
+            const maxDiscount = Number(paypalSection.dataset.maxDiscount || '0');
+            const pointsDiscount = usePoints && usePoints.checked ? maxDiscount : 0;
+            const discount = promoDiscount + pointsDiscount;
+            const finalTotal = Math.max(0, baseTotal - discount);
+
+            if (discount > 0) {
+                discountLine.style.display = 'block';
+                discountAmount.textContent = discount.toFixed(2);
+            } else {
+                discountLine.style.display = 'none';
+                discountAmount.textContent = '0.00';
+            }
+            if (orderOriginal) {
+                orderOriginal.textContent = baseTotal.toFixed(2);
+            }
+            orderTotal.textContent = finalTotal.toFixed(2);
+        };
+
+        if (usePoints) {
+            usePoints.addEventListener('change', updateTotals);
+        }
+        updateTotals();
+
+        if (paypalEnabled && window.paypal) {
+            const createOrder = () => {
+                if (!form.reportValidity()) {
+                    throw new Error('Missing shipping details');
+                }
+                return fetch('/paypal/create-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        use_points: usePoints && usePoints.checked,
+                        promo_code: promoInput ? promoInput.value : ''
+                    })
+                })
+                    .then((res) => res.json())
+                    .then((data) => {
+                        if (!data || !data.id) {
+                            throw new Error((data && data.error) || 'Failed to create order');
+                        }
+                        return data.id;
+                    });
+            };
+
+            const onApprove = (data) => {
+                return fetch('/paypal/capture-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderID: data.orderID })
+                })
+                    .then((res) => res.json())
+                    .then((capturePayload) => {
+                        const captureId = (capturePayload && capturePayload.captureId) || data.orderID;
+                        return fetch('/checkout/paypal-complete', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                shipping_name: document.getElementById('shipping_name').value,
+                                shipping_address: document.getElementById('shipping_address').value,
+                                use_points: usePoints && usePoints.checked,
+                                promo_code: promoInput ? promoInput.value : '',
+                                paypal_ref: captureId,
+                                paypal_order_id: data.orderID
+                            })
+                        });
+                    })
+                    .then((res) => res.json())
+                    .then((payload) => {
+                        if (payload && payload.orderId) {
+                            window.location.href = `/checkout-success/${payload.orderId}`;
+                        }
+                    });
+            };
+
+            paypal.Buttons({
+                fundingSource: paypal.FUNDING.PAYPAL,
+                style: { layout: 'vertical', color: 'gold', label: 'paypal' },
+                createOrder,
+                onApprove
+            }).render('#paypal-button-container');
+
+            paypal.Buttons({
+                fundingSource: paypal.FUNDING.CARD,
+                style: { layout: 'vertical', color: 'black' },
+                createOrder,
+                onApprove
+            }).render('#card-button-container');
+        }
+
+        if (stripeButton) {
+            stripeButton.addEventListener('click', () => {
+                if (!form.reportValidity()) {
+                    return;
+                }
+                fetch('/stripe/cart-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        shipping_name: document.getElementById('shipping_name').value,
+                        shipping_address: document.getElementById('shipping_address').value,
+                        use_points: usePoints && usePoints.checked,
+                        promo_code: promoInput ? promoInput.value : ''
+                    })
+                })
+                    .then((res) => {
+                        if (res.ok) return res.json();
+                        // surface server error text/HTML instead of JSON parse error
+                        return res.text().then((txt) => {
+                            const message = (txt && txt.slice(0, 500)) || 'Failed to create Stripe session';
+                            throw new Error(message);
+                        });
+                    })
+                    .then((payload) => {
+                        if (!payload || !payload.url) {
+                            throw new Error('Failed to create Stripe session');
+                        }
+                        window.location.href = payload.url;
+                    })
+                    .catch((err) => {
+                        console.error(err);
+                        alert(err.message || 'Failed to start Stripe checkout.');
+                    });
+            });
+        }
+    </script>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

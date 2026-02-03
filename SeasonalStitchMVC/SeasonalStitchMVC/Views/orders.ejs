@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title><%= isAdmin ? 'All Orders' : 'Order History' %> - Seasonal Stitch</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">Seasonal Stitch</a>
+        <div class="nav-links">
+            <% if (user && user.role === 'admin') { %>
+                <a class="<%= activePage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">Dashboard</a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/admin/orders">Orders</a>
+                <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
+                <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
+                <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
+            <% } else { %>
+                <a class="<%= activePage === 'shop' ? 'active' : '' %>" href="/#shop">Shop</a>
+                <a class="<%= activePage === 'cart' ? 'active' : '' %>" href="/cart">Cart (<%= cartCount %>)</a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/orders">Orders</a>
+                <span class="nav-pill">Points: <%= user ? (user.points || 0) : 0 %></span>
+                <span class="nav-pill secondary">Profile</span>
+            <% } %>
+            <% if (user) { %>
+                <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
+                <a href="/logout">Logout</a>
+            <% } else { %>
+                <a href="/login">Login</a>
+                <a href="/register">Register</a>
+            <% } %>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="admin-header">
+            <h2><%= isAdmin ? 'All Orders' : 'Your Orders' %></h2>
+            <% if (!isAdmin) { %>
+                <a href="/" class="btn btn-outline">Continue Shopping</a>
+            <% } %>
+        </div>
+
+        <% if (isAdmin) { %>
+            <section class="filter-bar">
+                <form class="filter-form" method="get" action="/admin/orders">
+                    <input type="text" name="q" placeholder="Search by customer or email..." value="<%= filters && filters.q ? filters.q : '' %>">
+                    <select name="status">
+                        <option value="all" <%= !filters || filters.status === 'all' ? 'selected' : '' %>>All statuses</option>
+                        <option value="pending" <%= filters && filters.status === 'pending' ? 'selected' : '' %>>Pending</option>
+                        <option value="delivering" <%= filters && filters.status === 'delivering' ? 'selected' : '' %>>Delivering</option>
+                        <option value="delivered" <%= filters && filters.status === 'delivered' ? 'selected' : '' %>>Delivered</option>
+                    </select>
+                    <select name="refund">
+                        <option value="all" <%= !filters || filters.refund === 'all' ? 'selected' : '' %>>Refund: All</option>
+                        <option value="none" <%= filters && filters.refund === 'none' ? 'selected' : '' %>>None</option>
+                        <option value="requested" <%= filters && filters.refund === 'requested' ? 'selected' : '' %>>Requested</option>
+                        <option value="approved" <%= filters && filters.refund === 'approved' ? 'selected' : '' %>>Approved</option>
+                        <option value="rejected" <%= filters && filters.refund === 'rejected' ? 'selected' : '' %>>Rejected</option>
+                    </select>
+                    <button type="submit" class="btn btn-outline btn-compact">Filter</button>
+                </form>
+            </section>
+        <% } else { %>
+            <section class="filter-bar">
+                <form class="filter-form" method="get" action="/orders">
+                    <select name="status">
+                        <option value="all" <%= !filters || filters.status === 'all' ? 'selected' : '' %>>All statuses</option>
+                        <option value="pending" <%= filters && filters.status === 'pending' ? 'selected' : '' %>>Pending</option>
+                        <option value="delivering" <%= filters && filters.status === 'delivering' ? 'selected' : '' %>>Delivering</option>
+                        <option value="delivered" <%= filters && filters.status === 'delivered' ? 'selected' : '' %>>Delivered</option>
+                    </select>
+                    <button type="submit" class="btn btn-outline btn-compact">Filter</button>
+                </form>
+            </section>
+        <% } %>
+
+        <% if (!orders || orders.length === 0) { %>
+            <div class="empty-state">
+                <p><%= isAdmin ? 'No orders available yet.' : 'No orders found yet.' %></p>
+                <% if (isAdmin) { %>
+                    <a href="/admin/dashboard" class="btn btn-outline">Back to Dashboard</a>
+                <% } else { %>
+                    <a href="/" class="btn btn-primary">Start Shopping</a>
+                <% } %>
+            </div>
+        <% } else { %>
+            <div class="orders-grid">
+                <% orders.forEach(order => { const status = order.status === 'on_hold' ? 'pending' : (order.status || 'pending'); const refundStatus = order.refund_status || 'none'; %>
+                    <div class="order-card">
+                        <div class="order-card-header">
+                            <div>
+                                <p class="order-label">Order</p>
+                                <h3>#<%= order.order_id %></h3>
+                            </div>
+                            <div class="order-meta">
+                                <span class="order-date"><%= new Date(order.created_at).toLocaleDateString() %></span>
+                                <span class="status-pill status-<%= status %>">
+                                    <%= status === 'delivering' ? 'On delivery' : status === 'delivered' ? 'Delivered' : 'Pending' %>
+                                </span>
+                                <% if (refundStatus !== 'none') { %>
+                                    <span class="status-pill status-<%= refundStatus %>">Refund: <%= refundStatus %></span>
+                                <% } %>
+                            </div>
+                        </div>
+
+                        <div class="order-card-body">
+                            <% if (isAdmin) { %>
+                                <p><strong>Customer:</strong> <%= order.full_name %></p>
+                                <p class="order-muted"><%= order.email %></p>
+                            <% } else { %>
+                                <p><strong>Ship to:</strong> <%= order.shipping_name %></p>
+                                <p class="order-muted"><%= order.shipping_address %></p>
+                            <% } %>
+                        </div>
+
+                        <div class="order-card-footer">
+                            <div>
+                                <p class="order-label">Items</p>
+                                <p class="order-count"><%= order.item_count %></p>
+                            </div>
+                            <div>
+                                <p class="order-label">Total</p>
+                                <p class="order-total">$<%= Number(order.total).toFixed(2) %></p>
+                            </div>
+                        </div>
+
+                        <% if (isAdmin) { %>
+                            <div class="order-card-actions">
+                                <form action="/admin/orders/<%= order.order_id %>/status" method="post" class="status-form">
+                                    <label for="status-<%= order.order_id %>" class="order-label">Status</label>
+                                    <div class="status-control">
+                                        <select id="status-<%= order.order_id %>" name="status">
+                                            <option value="pending" <%= status === 'pending' ? 'selected' : '' %>>Pending</option>
+                                            <option value="delivering" <%= status === 'delivering' ? 'selected' : '' %>>On delivery</option>
+                                            <option value="delivered" <%= status === 'delivered' ? 'selected' : '' %>>Delivered</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-outline btn-compact btn-full">Update</button>
+                                    </div>
+                                </form>
+                                <% if (refundStatus === 'requested') { %>
+                                    <form action="/admin/orders/<%= order.order_id %>/refund" method="post" class="status-form">
+                                        <label class="order-label">Refund Request</label>
+                                        <div class="status-control">
+                                            <select name="decision">
+                                                <option value="approved">Approve</option>
+                                                <option value="rejected">Reject</option>
+                                            </select>
+                                            <input type="text" name="note" placeholder="Admin note (optional)">
+                                            <button type="submit" class="btn btn-danger btn-compact btn-full">Submit</button>
+                                        </div>
+                                    </form>
+                                <% } %>
+                                <a href="/order-summary/<%= order.order_id %>" class="btn btn-primary btn-full">View Order</a>
+                                <a href="/track/<%= order.order_id %>" class="btn btn-outline btn-full">View Tracking</a>
+                            </div>
+                        <% } else { %>
+                            <div class="order-actions">
+                                <a href="/order-summary/<%= order.order_id %>" class="btn btn-outline">View Order</a>
+                                <a href="/track/<%= order.order_id %>" class="btn btn-primary">Track</a>
+                            </div>
+                        <% } %>
+                    </div>
+                <% }); %>
+            </div>
+        <% } %>
+    </div>
+    <%- include('partials/footer') %>
+</body>
+</html>

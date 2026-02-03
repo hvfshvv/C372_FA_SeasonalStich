@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Users - Seasonal Stitch</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">Seasonal Stitch</a>
+        <div class="nav-links">
+            <a class="<%= activePage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">Dashboard</a>
+            <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/admin/orders">Orders</a>
+            <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
+            <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
+            <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
+            <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
+            <a href="/logout">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="admin-header">
+            <h2 class="page-title">Users</h2>
+        </div>
+
+        <section class="filter-bar">
+            <form class="filter-form" method="get" action="/admin/users">
+                <input type="text" name="q" placeholder="Search users..." value="<%= filters && filters.q ? filters.q : '' %>">
+                <select name="role">
+                    <option value="all" <%= !filters || filters.role === 'all' ? 'selected' : '' %>>All</option>
+                    <option value="admin" <%= filters && filters.role === 'admin' ? 'selected' : '' %>>Admins</option>
+                    <option value="user" <%= filters && filters.role === 'user' ? 'selected' : '' %>>Users</option>
+                </select>
+                <button type="submit" class="btn btn-outline btn-compact">Filter</button>
+            </form>
+        </section>
+        <% if (!users || users.length === 0) { %>
+            <p class="empty-state">No users found.</p>
+        <% } else { %>
+            <div class="orders-grid">
+                <% users.forEach(entry => { %>
+                    <div class="order-card">
+                        <div class="order-card-header">
+                            <div>
+                                <p class="order-label">User</p>
+                                <h3><%= entry.full_name %></h3>
+                                <p class="order-muted"><%= entry.email %></p>
+                            </div>
+                            <div class="order-meta">
+                                <span class="status-pill"><%= entry.role %></span>
+                            </div>
+                        </div>
+                        <div class="order-card-footer">
+                            <form action="/admin/users/<%= entry.user_id %>/points" method="post" class="status-form">
+                                <label for="points-<%= entry.user_id %>" class="order-label">Points</label>
+                                <div class="status-control">
+                                    <input id="points-<%= entry.user_id %>" type="number" name="points" min="0" value="<%= entry.points || 0 %>">
+                                    <button type="submit" class="btn btn-outline">Update</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                <% }) %>
+            </div>
+        <% } %>
+    </div>
+    <%- include('partials/footer') %>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sales Report - Seasonal Stitch</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">Seasonal Stitch</a>
+        <div class="nav-links">
+            <a class="<%= activePage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">Dashboard</a>
+            <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/admin/orders">Orders</a>
+            <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
+            <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
+            <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
+            <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
+            <a href="/logout">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2 class="page-title">Sales Performance Report</h2>
+
+        <div class="form-container form-wide">
+            <form method="GET" action="/admin/reports" class="form-group">
+                <label for="start">Start Date</label>
+                <input id="start" type="date" name="start" value="<%= range.startValue %>">
+                <label for="end">End Date</label>
+                <input id="end" type="date" name="end" value="<%= range.endValue %>">
+                <div class="admin-controls">
+                    <button type="submit" class="btn btn-outline">Apply</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="hoodies-grid">
+            <div class="hoodie-card">
+                <div class="hoodie-info">
+                    <h3>Total Revenue</h3>
+                    <p class="price">$<%= Number(summary.total_revenue).toFixed(2) %></p>
+                </div>
+            </div>
+            <div class="hoodie-card">
+                <div class="hoodie-info">
+                    <h3>Total Orders</h3>
+                    <p class="price"><%= summary.total_orders %></p>
+                </div>
+            </div>
+            <div class="hoodie-card">
+                <div class="hoodie-info">
+                    <h3>Avg Order Value</h3>
+                    <p class="price">$<%= Number(summary.avg_order_value).toFixed(2) %></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-container form-wide">
+            <h3>Order Status Breakdown</h3>
+            <% if (!statusCounts || statusCounts.length === 0) { %>
+                <p class="order-muted">No orders in this period.</p>
+            <% } else { %>
+                <div class="orders-grid">
+                    <% statusCounts.forEach(item => { %>
+                        <div class="order-card">
+                            <div class="order-card-header">
+                                <div>
+                                    <p class="order-label">Status</p>
+                                    <h3><%= item.status || 'pending' %></h3>
+                                </div>
+                                <div class="order-meta">
+                                    <span class="status-pill status-<%= item.status || 'pending' %>"><%= item.count %> orders</span>
+                                </div>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+            <% } %>
+        </div>
+
+        <div class="form-container form-wide">
+            <h3>Top Products</h3>
+            <% if (!topProducts || topProducts.length === 0) { %>
+                <p class="order-muted">No product sales in this period.</p>
+            <% } else { %>
+                <div class="orders-grid">
+                    <% topProducts.forEach(product => { %>
+                        <div class="order-card">
+                            <div class="order-card-header">
+                                <div>
+                                    <p class="order-label">Product</p>
+                                    <h3><%= product.name %></h3>
+                                </div>
+                            </div>
+                            <div class="order-card-footer">
+                                <div>
+                                    <p class="order-label">Units Sold</p>
+                                    <p class="order-count"><%= product.units_sold %></p>
+                                </div>
+                                <div>
+                                    <p class="order-label">Revenue</p>
+                                    <p class="order-total">$<%= Number(product.revenue).toFixed(2) %></p>
+                                </div>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+            <% } %>
+        </div>
+
+        <div class="form-container form-wide">
+            <h3>Least Popular Products</h3>
+            <% if (!leastProducts || leastProducts.length === 0) { %>
+                <p class="order-muted">No product data in this period.</p>
+            <% } else { %>
+                <div class="orders-grid">
+                    <% leastProducts.forEach(product => { %>
+                        <div class="order-card">
+                            <div class="order-card-header">
+                                <div>
+                                    <p class="order-label">Product</p>
+                                    <h3><%= product.name %></h3>
+                                </div>
+                            </div>
+                            <div class="order-card-footer">
+                                <div>
+                                    <p class="order-label">Units Sold</p>
+                                    <p class="order-count"><%= product.units_sold %></p>
+                                </div>
+                                <div>
+                                    <p class="order-label">Revenue</p>
+                                    <p class="order-total">$<%= Number(product.revenue).toFixed(2) %></p>
+                                </div>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+            <% } %>
+        </div>
+
+        <div class="form-container form-wide">
+            <h3>Refund Summary</h3>
+            <div class="orders-grid">
+                <div class="order-card">
+                    <div class="order-card-header">
+                        <div>
+                            <p class="order-label">Requested</p>
+                            <h3><%= refund.requested_count %></h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="order-card">
+                    <div class="order-card-header">
+                        <div>
+                            <p class="order-label">Approved</p>
+                            <h3><%= refund.approved_count %></h3>
+                        </div>
+                    </div>
+                    <div class="order-card-footer">
+                        <div>
+                            <p class="order-label">Amount</p>
+                            <p class="order-total">$<%= Number(refund.approved_amount).toFixed(2) %></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="order-card">
+                    <div class="order-card-header">
+                        <div>
+                            <p class="order-label">Rejected</p>
+                            <h3><%= refund.rejected_count %></h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <%- include('partials/footer') %>
+</body>
+</html>

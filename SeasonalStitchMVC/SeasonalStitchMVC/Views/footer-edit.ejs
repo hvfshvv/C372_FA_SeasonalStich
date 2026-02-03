@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Footer - Seasonal Stitch</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">Seasonal Stitch</a>
+        <div class="nav-links">
+            <a class="<%= activePage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">Dashboard</a>
+            <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/admin/orders">Orders</a>
+            <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
+            <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
+            <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
+            <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
+            <a href="/logout">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="form-container form-medium">
+            <h2>Edit Footer Contact & Socials</h2>
+            <p>These links are shown to all users. Only admins can edit.</p>
+            <form method="post" action="/admin/footer">
+                <div class="form-group">
+                    <label for="instagram">Instagram URL</label>
+                    <input id="instagram" type="url" name="instagram" value="<%= footer.instagram %>" required>
+                </div>
+                <div class="form-group">
+                    <label for="facebook">Facebook URL</label>
+                    <input id="facebook" type="url" name="facebook" value="<%= footer.facebook %>" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Support Email</label>
+                    <input id="email" type="email" name="email" value="<%= footer.email %>" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Support Phone</label>
+                    <input id="phone" type="text" name="phone" value="<%= footer.phone %>" required>
+                </div>
+                <div class="admin-controls">
+                    <button type="submit" class="btn btn-primary">Save Footer</button>
+                    <a href="/admin/dashboard" class="btn btn-outline">Back to Dashboard</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

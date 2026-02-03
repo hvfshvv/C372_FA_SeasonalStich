@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Order Summary - Seasonal Stitch</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="/" class="brand">Seasonal Stitch</a>
+        <div class="nav-links">
+            <% if (user && user.role === 'admin') { %>
+                <a class="<%= activePage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">Dashboard</a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/admin/orders">Orders</a>
+                <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
+                <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
+                <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
+                <a href="/logout">Logout</a>
+            <% } else if (user) { %>
+                <a class="<%= activePage === 'shop' ? 'active' : '' %>" href="/#shop">Shop</a>
+                <a class="<%= activePage === 'cart' ? 'active' : '' %>" href="/cart">Cart (<%= cartCount %>)</a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/orders">Orders</a>
+                <span class="nav-pill">Points: <%= user.points || 0 %></span>
+                <span class="nav-pill secondary">Profile</span>
+                <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
+                <a href="/logout">Logout</a>
+            <% } else { %>
+                <a href="/#hero">Home</a>
+                <a href="/#shop">Shop</a>
+                <a href="/login">Login</a>
+                <a href="/register">Register</a>
+            <% } %>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="form-container form-wide">
+            <% const status = order && order.status ? (order.status === 'on_hold' ? 'pending' : order.status) : 'pending'; %>
+            <h2>Order #<%= order ? order.order_id : '' %> Summary</h2>
+            <% if (order) { %>
+                <p>Placed on <%= new Date(order.created_at).toLocaleString() %></p>
+                <p>
+                    Status:
+                    <span class="status-pill status-<%= status %>">
+                        <%= status === 'delivering' ? 'On delivery' : status === 'delivered' ? 'Delivered' : 'Pending' %>
+                    </span>
+                </p>
+                <p>Ship to: <strong><%= order.shipping_name %></strong></p>
+                <p><%= order.shipping_address %></p>
+                <% const paymentStatus = order.payment_status || 'unpaid'; %>
+                <p>
+                    Payment:
+                    <strong><%= paymentStatus === 'paid' ? 'Paid' : 'Unpaid' %></strong>
+                </p>
+                <% if (order.payment_provider) { %>
+                    <p class="order-muted">Method: <%= order.payment_provider %></p>
+                <% } %>
+                <% if (order.payment_ref) { %>
+                    <p class="order-muted">Payment Ref: <%= order.payment_ref %></p>
+                <% } %>
+                <% if (user && user.role !== 'admin' && paymentStatus !== 'paid') { %>
+                    <form action="/stripe/checkout-session/<%= order.order_id %>" method="post" class="admin-controls">
+                        <button type="submit" class="btn btn-primary">Pay with Stripe</button>
+                    </form>
+                <% } %>
+                <% if (user && user.role === 'admin') { %>
+                    <p>Customer: <strong><%= order.full_name %></strong> (<%= order.email %>)</p>
+                <% } %>
+                <% if (typeof order.discount_amount !== 'undefined') { %>
+                    <p><strong>Discount:</strong> $<%= Number(order.discount_amount || 0).toFixed(2) %></p>
+                <% } %>
+                <% if (typeof order.points_redeemed !== 'undefined') { %>
+                    <p><strong>Points Redeemed:</strong> <%= order.points_redeemed || 0 %></p>
+                <% } %>
+                <% if (typeof order.points_earned !== 'undefined') { %>
+                    <p><strong>Points Earned:</strong> <%= order.points_earned || 0 %></p>
+                <% } %>
+            <% } %>
+        </div>
+
+        <% if (order) { %>
+            <div class="form-container form-wide">
+                <h3>Tracking Details</h3>
+                <% if (order.tracking_number || order.tracking_provider || order.tracking_url) { %>
+                    <p><strong>Provider:</strong> <%= order.tracking_provider || 'Not provided' %></p>
+                    <p><strong>Tracking Number:</strong> <%= order.tracking_number || 'Not provided' %></p>
+                    <p>
+                        <strong>Tracking Link:</strong>
+                        <% if (order.tracking_url) { %>
+                            <a href="<%= order.tracking_url %>" target="_blank" rel="noopener">View Tracking</a>
+                        <% } else { %>
+                            Not provided
+                        <% } %>
+                    </p>
+                <% } else { %>
+                    <p class="order-muted">Tracking details are not available yet.</p>
+                <% } %>
+
+                <% if (user && user.role === 'admin') { %>
+                    <form action="/admin/orders/<%= order.order_id %>/tracking" method="post" class="form-group">
+                        <label for="tracking_provider">Carrier/Provider</label>
+                        <input id="tracking_provider" type="text" name="tracking_provider" value="<%= order.tracking_provider || '' %>">
+                        <label for="tracking_number">Tracking Number</label>
+                        <input id="tracking_number" type="text" name="tracking_number" value="<%= order.tracking_number || '' %>">
+                        <label for="tracking_url">Tracking URL</label>
+                        <input id="tracking_url" type="url" name="tracking_url" value="<%= order.tracking_url || '' %>">
+                        <div class="admin-controls">
+                            <button type="submit" class="btn btn-outline">Update Tracking</button>
+                        </div>
+                    </form>
+                <% } %>
+            </div>
+
+            <div class="form-container form-wide">
+                <h3>Refund</h3>
+                <% const refundStatus = order.refund_status || 'none'; %>
+                <p><strong>Status:</strong> <%= refundStatus === 'none' ? 'Not requested' : refundStatus %></p>
+                <% if (order.refund_reason) { %>
+                    <p><strong>Reason:</strong> <%= order.refund_reason %></p>
+                <% } %>
+                <% if (order.refund_note) { %>
+                    <p><strong>Admin Note:</strong> <%= order.refund_note %></p>
+                <% } %>
+
+                <% if (user && user.role !== 'admin' && refundStatus === 'none' && status === 'delivered') { %>
+                    <form action="/orders/<%= order.order_id %>/refund" method="post">
+                        <div class="form-group">
+                            <label for="refund_reason">Reason for refund</label>
+                            <textarea id="refund_reason" name="reason" rows="3" placeholder="Tell us why you need a refund" required></textarea>
+                        </div>
+                        <div class="admin-controls">
+                            <button type="submit" class="btn btn-danger">Request Refund</button>
+                        </div>
+                    </form>
+                <% } else if (user && user.role !== 'admin' && status !== 'delivered') { %>
+                    <p class="order-muted">Refunds can be requested after delivery.</p>
+                <% } %>
+            </div>
+        <% } %>
+
+        <% if (!items || items.length === 0) { %>
+            <p class="empty-state">No items found for this order.</p>
+        <% } else { %>
+            <div class="hoodies-grid">
+                <% items.forEach(item => { %>
+                    <div class="hoodie-card">
+                        <img src="/images/<%= item.image_url %>" alt="<%= item.name %>">
+                        <div class="hoodie-info">
+                            <h3><%= item.name %></h3>
+                            <p class="stock">Qty: <%= item.quantity %></p>
+                            <p class="price">$<%= Number(item.price).toFixed(2) %> each</p>
+                            <p><strong>Line Total:</strong> $<%= (Number(item.price) * item.quantity).toFixed(2) %></p>
+                            <% const itemReview = reviews && reviews[item.hoodie_id] ? reviews[item.hoodie_id] : null; %>
+                            <% if (user && user.role !== 'admin' && status === 'delivered') { %>
+                                <div class="review-block">
+                                    <% if (itemReview) { %>
+                                        <p class="order-muted">Your rating: <strong><%= itemReview.rating %>/5</strong></p>
+                                        <% if (itemReview.review_text) { %>
+                                            <p class="order-muted"><%= itemReview.review_text %></p>
+                                        <% } %>
+                                    <% } %>
+                                    <form action="/reviews/<%= order.order_id %>/<%= item.hoodie_id %>" method="post" class="review-form">
+                                        <label for="rating-<%= item.hoodie_id %>">Rating</label>
+                                        <select id="rating-<%= item.hoodie_id %>" name="rating" required>
+                                            <% for (let r = 5; r >= 1; r -= 1) { %>
+                                                <option value="<%= r %>" <%= itemReview && Number(itemReview.rating) === r ? 'selected' : '' %>><%= r %></option>
+                                            <% } %>
+                                        </select>
+                                        <label for="review-<%= item.hoodie_id %>">Review</label>
+                                        <textarea id="review-<%= item.hoodie_id %>" name="review_text" rows="2" placeholder="Share your thoughts"><%= itemReview && itemReview.review_text ? itemReview.review_text : '' %></textarea>
+                                        <button type="submit" class="btn btn-outline btn-compact"><%= itemReview ? 'Update Review' : 'Submit Review' %></button>
+                                    </form>
+                                </div>
+                            <% } else if (user && user.role !== 'admin' && status !== 'delivered') { %>
+                                <p class="order-muted">Reviews are available after delivery.</p>
+                            <% } %>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+
+            <div class="form-container form-medium">
+                <h3>Totals</h3>
+                <p><strong>Items:</strong> <%= totals.items %></p>
+                <p><strong>Order Total:</strong> $<%= totals.total.toFixed(2) %></p>
+                <div class="admin-controls center">
+                    <a href="/invoice/<%= order.order_id %>/view" class="btn btn-outline">View Invoice</a>
+                    <a href="/invoice/<%= order.order_id %>" class="btn btn-outline">Download PDF</a>
+                    <% if (user && user.role === 'admin') { %>
+                        <a href="/admin/orders" class="btn btn-primary">Back to Orders</a>
+                    <% } else { %>
+                        <a href="/" class="btn btn-primary">Back to Products</a>
+                    <% } %>
+                </div>
+            </div>
+        <% } %>
+    </div>
+    <%- include('partials/footer') %>
+</body>
+</html>
