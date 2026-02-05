@@ -5,11 +5,17 @@ const db = require('../db');
 const Hoodie = {
     getAll: (callback) => {
         const sql = `
-            SELECT h.*, COALESCE(AVG(r.rating), 0) AS avg_rating,
-                   COUNT(r.review_id) AS review_count
+            SELECT h.*,
+                   COALESCE(r.avg_rating, 0) AS avg_rating,
+                   COALESCE(r.review_count, 0) AS review_count
             FROM hoodies h
-            LEFT JOIN reviews r ON r.hoodie_id = h.hoodie_id
-            GROUP BY h.hoodie_id
+            LEFT JOIN (
+                SELECT hoodie_id,
+                       AVG(rating) AS avg_rating,
+                       COUNT(review_id) AS review_count
+                FROM reviews
+                GROUP BY hoodie_id
+            ) r ON r.hoodie_id = h.hoodie_id
         `;
         db.query(sql, callback);
     },
@@ -44,3 +50,6 @@ const Hoodie = {
 };
 
 module.exports = Hoodie;
+
+
+

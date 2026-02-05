@@ -14,19 +14,13 @@
                 <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
                 <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
                 <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
-                <a class="nav-pill" href="/stitchybank">Stitches: <%= stitchesBalance || 0 %></a>
                 <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
                 <a href="/logout">Logout</a>
             <% } else if (user) { %>
                 <a class="<%= activePage === 'shop' ? 'active' : '' %>" href="/#shop">Shop</a>
                 <a class="<%= activePage === 'cart' ? 'active' : '' %>" href="/cart">Cart (<%= cartCount %>)</a>
-                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/orders">
-                    Orders
-                    <% if (reviewableCount && reviewableCount > 0) { %>
-                        <span class="nav-badge"><%= reviewableCount %></span>
-                    <% } %>
-                </a>
-                <a class="nav-pill" href="/stitchybank">Stitches: <%= stitchesBalance || 0 %></a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/orders">Orders</a>
+                <span class="nav-pill">Points: <%= user.points || 0 %></span>
                 <span class="nav-pill secondary">Profile</span>
                 <span class="nav-welcome center">Welcome, <%= user.full_name %></span>
                 <a href="/logout">Logout</a>
@@ -101,7 +95,7 @@
                             <details class="hoodie-details">
                                 <summary class="hoodie-summary">
                                     <div>
-                                        <h3><a href="/product/<%= hoodie.hoodie_id %>"><%= hoodie.name %></a></h3>
+                                        <h3><%= hoodie.name %></h3>
                                         <p class="price">$<%= Number(hoodie.price).toFixed(2) %></p>
                                     </div>
                                     <span class="summary-toggle">Details</span>

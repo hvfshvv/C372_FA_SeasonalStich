@@ -14,17 +14,11 @@
                 <a class="<%= activePage === 'inventory' ? 'active' : '' %>" href="/inventory">Inventory</a>
                 <a class="<%= activePage === 'reports' ? 'active' : '' %>" href="/admin/reports">Reports</a>
                 <a class="<%= activePage === 'users' ? 'active' : '' %>" href="/admin/users">Users</a>
-                <a class="nav-pill" href="/stitchybank">Stitches: <%= stitchesBalance || 0 %></a>
             <% } else { %>
                 <a class="<%= activePage === 'shop' ? 'active' : '' %>" href="/#shop">Shop</a>
-                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/orders">
-                    Orders
-                    <% if (reviewableCount && reviewableCount > 0) { %>
-                        <span class="nav-badge"><%= reviewableCount %></span>
-                    <% } %>
-                </a>
+                <a class="<%= activePage === 'orders' ? 'active' : '' %>" href="/orders">Orders</a>
                 <a class="<%= activePage === 'cart' ? 'active' : '' %>" href="/cart">Cart (<%= cartCount %>)</a>
-                <a class="nav-pill" href="/stitchybank">Stitches: <%= stitchesBalance || 0 %></a>
+                <span class="nav-pill">Points: <%= user ? (user.points || 0) : 0 %></span>
                 <span class="nav-pill secondary">Profile</span>
             <% } %>
             <% if (user) { %>

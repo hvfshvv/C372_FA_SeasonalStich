@@ -3,6 +3,7 @@ const Order = require('../Models/Order');
 const Invoice = require('../Models/Invoice');
 const PromoCode = require('../Models/PromoCode');
 const Review = require('../Models/Review');
+const { client: paypalClient, paypal } = require('../config/paypal');
 const { calculatePricing, getMaxPointsDiscount } = require('../utils/pricing');
 
 const buildTotals = (cart) => cart.reduce(
@@ -57,6 +58,17 @@ const renderCheckout = (req, res, payload) => {
         promoDiscount: payload.promoDiscount || 0,
         promoError: payload.promoError || ''
     });
+};
+
+const refundPaypalCapture = async (captureId, amount) => {
+    const request = new paypal.payments.CapturesRefundRequest(captureId);
+    request.requestBody({
+        amount: {
+            value: Number(amount || 0).toFixed(2),
+            currency_code: 'SGD'
+        }
+    });
+    return paypalClient().execute(request);
 };
 
 const OrderController = {
@@ -267,38 +279,17 @@ const OrderController = {
 
     history: (req, res) => {
         Order.getByUser(req.session.user.user_id, (err, orders) => {
-            if (err) {
-                console.error("orders route error:", err);
-                return res.status(500).render('orders', {
-                    orders: [],
-                    user: req.session.user,
-                    isAdmin: false,
-                    filters: { status: (req.query.status || 'all').toLowerCase() },
-                    emptyMessage: 'No past orders :,(',
-                    error: 'We could not load your orders right now.'
-                });
-            }
+            if (err) return res.status(500).send('Failed to load orders');
             const statusFilter = (req.query.status || 'all').toLowerCase();
             const filtered = (orders || []).filter((order) => {
                 const status = (order.status === 'on_hold' ? 'pending' : (order.status || 'pending')).toLowerCase();
                 return statusFilter === 'all' ? true : status === statusFilter;
             });
-            Review.getReviewableCountsByOrder(req.session.user.user_id, (revErr, reviewableMap) => {
-                if (revErr) {
-                    console.error("orders route error:", revErr);
-                }
-                const decorated = (filtered || []).map((order) => ({
-                    ...order,
-                    reviewableProductsCount: reviewableMap ? (reviewableMap[order.order_id] || 0) : 0
-                }));
-                res.render('orders', {
-                    orders: decorated,
-                    user: req.session.user,
-                    isAdmin: false,
-                    filters: { status: statusFilter },
-                    emptyMessage: 'No past orders :,(',
-                    error: null
-                });
+            res.render('orders', {
+                orders: filtered,
+                user: req.session.user,
+                isAdmin: false,
+                filters: { status: statusFilter }
             });
         });
     },
@@ -322,16 +313,14 @@ const OrderController = {
             });
 
             res.render('orders', {
-                orders: filtered || [],
+                orders: filtered,
                 user: req.session.user,
                 isAdmin: true,
                 filters: {
                     q: req.query.q || '',
                     status: statusFilter,
                     refund: refundFilter
-                },
-                emptyMessage: 'No past orders :,(',
-                error: null
+                }
             });
         });
     },
@@ -371,17 +360,12 @@ const OrderController = {
             if (!isAdmin && order.user_id !== req.session.user.user_id) {
                 return res.status(403).send('Forbidden');
             }
-            Order.awardStitchesIfNeeded(orderId, (awardErr) => {
-                if (awardErr) {
-                    console.error('Failed to award stitches:', awardErr);
-                }
-                res.render('checkout-success', {
-                    orderId: order.order_id,
-                    total: Number(order.total),
-                    paymentRef: order.payment_ref || '',
-                    paymentProvider: order.payment_provider || '',
-                    user: req.session.user
-                });
+            res.render('checkout-success', {
+                orderId: order.order_id,
+                total: Number(order.total),
+                paymentRef: order.payment_ref || '',
+                paymentProvider: order.payment_provider || '',
+                user: req.session.user
             });
         });
     },
@@ -420,22 +404,14 @@ const OrderController = {
                 });
             };
 
-            const continueRender = () => {
-                if (!isAdmin) {
-                    return Review.getByOrderForUser(orderId, req.session.user.user_id, (revErr, reviews) => {
-                        if (revErr) return res.status(500).send('Failed to load reviews');
-                        return renderSummary(reviews);
-                    });
-                }
-                return renderSummary([]);
-            };
+            if (!isAdmin) {
+                return Review.getByOrderForUser(orderId, req.session.user.user_id, (revErr, reviews) => {
+                    if (revErr) return res.status(500).send('Failed to load reviews');
+                    return renderSummary(reviews);
+                });
+            }
 
-            return Order.awardStitchesIfNeeded(orderId, (awardErr) => {
-                if (awardErr) {
-                    console.error('Failed to award stitches:', awardErr);
-                }
-                return continueRender();
-            });
+            return renderSummary([]);
         });
     },
 
@@ -532,7 +508,7 @@ const OrderController = {
         });
     },
 
-    resolveRefund: (req, res) => {
+    resolveRefund: async (req, res) => {
         const orderId = req.params.id;
         const decision = req.body.decision;
         const note = (req.body.note || '').trim();
@@ -541,10 +517,32 @@ const OrderController = {
             return res.status(400).send('Invalid refund decision');
         }
 
-        Order.resolveRefund(orderId, decision, note, (err) => {
-            if (err) return res.status(500).send('Failed to update refund');
-            res.redirect('/admin/orders');
-        });
+        try {
+            const order = await new Promise((resolve, reject) => {
+                Order.getById(orderId, (err, row) => (err ? reject(err) : resolve(row)));
+            });
+            if (!order) return res.status(404).send('Order not found');
+
+            if (decision === 'approved' && order.payment_provider === 'paypal') {
+                if (!order.payment_ref) {
+                    return res.status(400).send('Missing PayPal capture reference for this order');
+                }
+                try {
+                    await refundPaypalCapture(order.payment_ref, order.total);
+                } catch (refundErr) {
+                    console.error('PayPal refund failed:', refundErr);
+                    return res.status(502).send('Failed to process PayPal refund');
+                }
+            }
+
+            return Order.resolveRefund(orderId, decision, note, (err) => {
+                if (err) return res.status(500).send('Failed to update refund');
+                return res.redirect('/admin/orders');
+            });
+        } catch (err) {
+            console.error('Refund handling error:', err);
+            return res.status(500).send('Failed to process refund');
+        }
     },
 
     updateTracking: (req, res) => {

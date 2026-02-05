@@ -55,25 +55,6 @@ const User = {
     updatePoints: (userId, points, callback) => {
         const sql = 'UPDATE users SET points = ? WHERE user_id = ?';
         db.query(sql, [points, userId], callback);
-    },
-
-    getStitchesBalance: (userId, callback) => {
-        const sql = 'SELECT stitches_balance FROM users WHERE user_id = ?';
-        db.query(sql, [userId], (err, rows) => {
-            if (err) return callback(err);
-            if (!rows || rows.length === 0) return callback(null, 0);
-            return callback(null, Number(rows[0].stitches_balance || 0));
-        });
-    },
-
-    addStitchesBalance: (userId, amount, callback) => {
-        const sql = 'UPDATE users SET stitches_balance = stitches_balance + ? WHERE user_id = ?';
-        db.query(sql, [Number(amount) || 0, userId], callback);
-    },
-
-    deductStitchesBalance: (userId, amount, callback) => {
-        const sql = 'UPDATE users SET stitches_balance = GREATEST(stitches_balance - ?, 0) WHERE user_id = ?';
-        db.query(sql, [Number(amount) || 0, userId], callback);
     }
 };
 
